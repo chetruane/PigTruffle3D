@@ -1,0 +1,2446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pig Truffle 3D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #81c8e4; /* Sky blue - page background, not game sky */
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        canvas {
+            display: block;
+        }
+        #filter-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(92, 87, 60, 0.2);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #top-ui-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0 10px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        #time-tax-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            pointer-events: auto;
+        }
+        #game-clock {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #4A3B31;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #tax-due-display {
+            font-size: 0.9em;
+            color: #c0392b;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        #money-info-wrapper {
+            display: flex;
+            align-items: center;
+            pointer-events: auto;
+        }
+        #money-counter {
+            background-color: rgba(255, 215, 0, 0.85);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 2px solid #DAA520;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #4A3B31;
+        }
+        #smell-boost-icon {
+            display: none;
+            margin-left: 8px;
+            cursor: help;
+            color: white;
+            font-weight: bold;
+            align-items: center;
+        }
+        #smell-boost-icon svg {
+            vertical-align: middle;
+            margin-right: 2px;
+        }
+        #smell-boost-icon span {
+            vertical-align: middle;
+        }
+        #controls-tip-top-right {
+            background-color: rgba(0,0,0,0.6);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            text-align: right;
+            pointer-events: auto;
+        }
+        #stats-display {
+            position: absolute;
+            bottom: 100px; /* Adjusted to make space for new buttons */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 250, 240, 0.85);
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            border: 2px solid #D2B48C;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px 20px;
+            width: auto;
+            max-width: 90%;
+            pointer-events: auto;
+        }
+        .stat-item {
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .stat-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .stat-item .name { color: #795548; pointer-events: none; }
+        .stat-item .count { color: #2E7D32; background-color: #E8F5E9; padding: 1px 5px; border-radius: 4px; pointer-events: none;}
+
+        #message-area {
+            background-color: rgba(255, 235, 59, 0.9);
+            color: #333;
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            font-weight: bold;
+            display: none;
+            margin-top: 10px;
+            position: absolute;
+            bottom: 170px; /* Adjusted for stats and new buttons */
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+
+        .bottom-button-bar { /* Container for bottom buttons */
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around; /* Distribute buttons nicely */
+            align-items: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+            pointer-events: none; /* Allow clicks only on buttons themselves */
+        }
+
+        .bottom-button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+            z-index: 20;
+            pointer-events: auto;
+            margin: 0 5px; /* Add some margin between buttons */
+        }
+        .bottom-button:hover {
+            background-color: #1976D2;
+        }
+         .bottom-button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+        #market-button {
+            background-color: #4CAF50; /* This is a green color */
+        }
+
+        #market-button:hover {
+            background-color: #45a049; /* A darker green for hover */
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 80%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: left; /* Default for modal content */
+        }
+        .modal-content h2 {
+            text-align: center;
+            margin-top: 0;
+            color: #4A3B31;
+        }
+        .modal-content .close-button {
+            display: block;
+            margin: 20px auto 0;
+            padding: 8px 15px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .market-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .market-item:last-child { border-bottom: none; }
+        .market-item-name { font-weight: bold; color: #5D4037;}
+        .market-item-price { font-weight: bold; }
+        .price-trend-up { color: green; }
+        .price-trend-down { color: red; }
+        .price-history-graph {
+            width: 100%; height: 50px; border: 1px solid #ddd;
+            margin-top: 5px; background-color: #f9f9f9;
+        }
+        .settings-option {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .settings-option label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #5D4037;
+        }
+        .settings-option input[type="range"],
+        .settings-option input[type="checkbox"] {
+            margin-top: 5px;
+        }
+        .slider-value {
+            margin-left: 10px;
+            font-style: italic;
+            color: #777;
+        }
+        #game-over-screen {
+            background-color: rgba(0,0,0,0.85);
+            z-index: 200;
+            color: white;
+            text-align: center;
+        }
+        #game-over-screen .modal-content {
+            background-color: #2c2c2c;
+            color: #f44336;
+            border: 2px solid #f44336;
+        }
+        #game-over-screen h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            color: #f44336;
+        }
+        #game-over-message {
+            font-size: 1.1em;
+            color: #f0f0f0;
+        }
+        #final-score-display { /* For game over screen */
+            font-size: 1.2em;
+            color: #ffd700; /* Gold color for score */
+            margin-top: 10px;
+            font-weight: bold;
+        }
+         #final-days-display { /* For game over screen */
+            font-size: 1.1em;
+            color: #b2bcbd;
+            margin-top: 5px;
+        }
+
+        /* Scoreboard Styles */
+        #scoreboard-modal .modal-content {
+            text-align: center;
+        }
+        #scoreboard-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+        #scoreboard-list li {
+            padding: 8px 5px; /* Adjusted padding */
+            border-bottom: 1px solid #eee;
+            font-size: 1.05em; /* Slightly adjusted font size */
+            display: flex; /* Use flexbox for better alignment */
+            justify-content: space-between; /* Distribute items */
+            align-items: center;
+            flex-wrap: wrap; /* Allow wrapping if too long */
+        }
+        #scoreboard-list li:last-child {
+            border-bottom: none;
+        }
+        .score-entry-main { /* Group rank and score */
+            display: flex;
+            align-items: center;
+            flex-grow: 1; /* Allow this to take up space */
+        }
+        .score-rank {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #666;
+            min-width: 25px; /* Ensure rank has some space */
+            text-align: right;
+        }
+        .score-value {
+            color: #333;
+            font-weight: bold; /* Make score value bold */
+             margin-right: 10px; /* Space before days */
+        }
+        .score-days {
+            color: #555;
+            font-size: 0.9em;
+            margin-right: 10px; /* Space before date */
+        }
+         .score-date {
+            font-size: 0.8em;
+            color: #888;
+            white-space: nowrap; /* Prevent date from wrapping if possible */
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="filter-overlay"></div>
+
+        <div id="ui-overlay">
+            <div id="top-ui-bar">
+                <div id="time-tax-info">
+                    <div id="game-clock">DAY 1 - 06:00</div>
+                    <div id="tax-due-display">TAX DUE: $411.00</div>
+                </div>
+                <div id="money-info-wrapper">
+                    <div id="money-counter">$0.00</div>
+                    <div id="smell-boost-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12.55a8 8 0 0 1 14.08 0"></path>
+                        <path d="M1.42 9a12 12 0 0 1 21.16 0"></path>
+                        <path d="M8.53 16.11a4 4 0 0 1 6.95 0"></path>
+                        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                        </svg>
+                        <span>+</span>
+                    </div>
+                </div>     
+                <div id="controls-tip-top-right">WASD: Locate a scent<br>Click: Dig when it becomes unbearable</div>
+            </div>
+            <div id="stats-display">
+                </div>
+            <div id="message-area">Initializing...</div>
+
+            <div id="game-over-screen" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h1>GAME OVER</h1>
+                    <p id="game-over-message">You fell too deep into debt and were sent to the slaughterhouse.</p>
+                    <p id="final-score-display">Final Money: $0.00</p>
+                    <p id="final-days-display">Survived: 0 Days</p>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-button-bar">
+        <button id="settings-button" class="bottom-button">Settings</button>
+        <button id="save-game-button" class="bottom-button">Save Game</button>
+        <button id="load-game-button" class="bottom-button">Load Game</button>
+        <button id="scoreboard-button" class="bottom-button">Scoreboard</button>
+        <button id="market-button" class="bottom-button">Market</button>
+    </div>
+
+
+    <div id="market-modal" class="modal">
+        <div id="market-content" class="modal-content">
+            <h2>Big Truffle</h2>
+            <div id="market-items-container">
+                </div>
+            <button id="close-market-button" class="close-button">Close Market</button>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div id="settings-content" class="modal-content">
+            <h2>Settings</h2>
+            <div class="settings-option">
+                <label for="volume-slider">Master Volume: <span id="volume-value-display">100%</span></label>
+                <input type="range" id="volume-slider" min="0" max="100" value="100">
+            </div>
+            <div class="settings-option">
+                <label for="shadow-toggle">Toggle All Shadows:</label>
+                <input type="checkbox" id="shadow-toggle" checked>
+            </div>
+            <div class="settings-option">
+                <label for="cull-distance-slider">View/Cull Distance: <span id="cull-distance-value-display">100%</span></label>
+                <input type="range" id="cull-distance-slider" min="20" max="200" value="100">
+            </div>
+            <button id="close-settings-button" class="close-button">Close Settings</button>
+        </div>
+    </div>
+
+    <div id="scoreboard-modal" class="modal">
+        <div class="modal-content">
+            <h2>Scoreboard</h2>
+            <ol id="scoreboard-list">
+                </ol>
+            <button id="close-scoreboard-button" class="close-button">Close</button>
+        </div>
+    </div>
+
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="confirmation-title" style="text-align: center;">Confirm</h2>
+            <p id="confirmation-prompt-message" style="text-align: center; margin: 20px 0; font-size: 1.1em;"></p>
+            <div style="display: flex; justify-content: space-around;">
+                <button id="confirm-yes-button" class="bottom-button" style="background-color: #4CAF50; min-width: 80px;">Yes</button>
+                <button id="confirm-no-button" class="bottom-button" style="background-color: #f44336; min-width: 80px;">No</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- Core Three.js Setup ---
+        let scene, camera, renderer;
+        let pig, pigTargetRotation = 0;
+        const pigSpeed = 0.05;
+        const pigTurnSpeed = Math.PI / 100;
+        let keysPressed = {};
+        let pigShadowMesh;
+        let ambientLight, directionalLight; // Made ambientLight global for intensity updates
+        let pigBaseY; 
+        const PIG_BOB_AMOUNT = 0.02; 
+        const PIG_BOB_SPEED_FACTOR = 1; 
+
+
+        // --- Frustum Culling ---
+        const frustum = new THREE.Frustum();
+        const cameraViewProjectionMatrix = new THREE.Matrix4();
+
+        // --- Game World ---
+        const worldSize = 200;
+        const biomeRegions = [
+            { xMin: -worldSize/2, zMin: -worldSize/2, xMax: 0, zMax: 0, type: 'forest', color: 0x515E1E, treeDensity: 0.065 },
+            { xMin: 0, zMin: -worldSize/2, xMax: worldSize/2, zMax: 0, type: 'swamp', color: 0x474B2C, treeDensity: 0.036, mudChance: 0.1 },
+            { xMin: -worldSize/2, zMin: 0, xMax: worldSize/2, zMax: worldSize/2, type: 'heath', color: 0x888C4F, treeDensity: 0.0027, shrubDensity: 0.035, antNestDensity: 0.005 }
+        ];
+        const allTrees = [];
+        const allShrubs = [];
+        const allAntNests = [];
+        const allMudPatches = [];
+        const allFallenLogs = []; 
+        const allWells = []; 
+        const defaultCullDistance = 45;
+        let environmentElementCullingDistance = defaultCullDistance;
+
+
+        // --- Economy & Time ---
+        let currentMoney = 0;
+        const PRICE_HISTORY_LENGTH = 24;
+        let currentTaxAmount = 411;
+        let debtOwed = 0;
+        const taxIncreaseAmount = 58;
+
+        const REAL_SECONDS_PER_GAME_HOUR = 17.5;
+        let gameTimeElapsedSeconds = 0; 
+        let gameHour = 6;         
+        let gameMinute = 0;       
+        let gameDay = 1;          
+        let taxCollectedForThisDay = false;
+        const MINS_IN_LOGICAL_DAY = 24 * 60; 
+        const UI_DAY_TICK_GAME_START_OFFSET_MINS = (24 - 1.1) * 60; 
+        let lastAutoPriceIncreaseHour = -1; // Initialize to a value that ensures the first check runs
+
+        // --- Game State Variables ---
+        let animationFrameId; 
+        let isGameOver = false;
+        let consecutiveDebtRounds = 0;
+        const SAVE_GAME_KEY = 'pigTruffle3DSaveData'; 
+        const SCOREBOARD_KEY = 'pigTruffle3DScoreboard'; 
+        const MAX_SCOREBOARD_ENTRIES = 10;
+        let gamePausedByVisibility = false;
+
+        // --- Truffles & Smell System ---
+        let truffleSpecies = [ 
+            { name: "Perigord Black", id: 'perigord-black', count: 0, baseFreq: 131, color: 0x1A1A1A, basePrice: 100, currentPrice: 100, priceHistory: [], priceTrend: 'stable', marketCapMultiplier: 1, marketCapDivider: 1.1 },
+            { name: 'Summer Truffle', id: 'summer-truffle', count: 0, baseFreq: 110, color: 0x4A3B31, basePrice: 40, currentPrice: 40, priceHistory: [], priceTrend: 'stable', marketCapMultiplier: 0.75, marketCapDivider: 1 },
+            { name: 'Bianchetto Truffle', id: 'bianchetto-truffle', count: 0, baseFreq: 98, color: 0x94423A, basePrice: 25, currentPrice: 25, priceHistory: [], priceTrend: 'stable', marketCapMultiplier: 0.6, marketCapDivider: 1 },
+            { name: 'Italian White Truffle', id: 'italian-white', count: 0, baseFreq: 147, color: 0xFFFACD, basePrice: 300, currentPrice: 300, priceHistory: [], priceTrend: 'stable', marketCapMultiplier: 1.5, marketCapDivider: 2 },
+            { name: 'Prized White Alba', id: 'prized-white-alba', count: 0, baseFreq: 440, color: 0xFFFFF0, basePrice: 1200, currentPrice: 1200, priceHistory: [], priceTrend: 'stable', marketCapMultiplier: 5, marketCapDivider: 4 }
+        ];
+        const truffles = []; 
+        const maxTrufflesInWorld = 11;
+        
+        let smellDetectionRange = 25;
+        let initialSmellDetectionRange;
+        let isSmellBoostActive = false;
+        let smellBoostEndTime = 0;
+        let smellBoostIconElement;
+
+        const digRange = 3;
+        const pulseThreshold = digRange;
+
+        // --- Audio ---
+        let audioContext;
+        let masterGainNode;
+        let audioResumed = false;
+        const truffleAudioEmitters = new Map();
+        let digCooldown = false;
+        let lastTrotSoundTime = 0;
+        const MIN_TROT_INTERVAL = 320; 
+
+        // --- Ambient Sound System ---
+        const INITIAL_AMBIENT_SOUND_DELAY = 5000;
+        const AMBIENT_SOUND_INTERVAL = 2 * 60 * 1000;
+        let nextAmbientSoundTriggerTime;
+        let isFirstAmbientSoundPlay = true;
+
+        const AMBIENT_MELODIES = [
+            [208, null, 277, 330, 196],
+            [294, null, 277, 208, 247, 208]
+        ];
+        const AMBIENT_NOTE_DURATION = 0.8;
+        const AMBIENT_PLUCK_ATTACK = 0.01;
+        const AMBIENT_PLUCK_DECAY = 0.15;
+        const AMBIENT_PLUCK_SUSTAIN_MULTIPLIER = 0.05;
+        const AMBIENT_PLUCK_RELEASE = 3.0;
+
+
+        // --- Market Fluctuation Timer ---
+        const marketFluctuationInterval = 3 * 60 * 1000; 
+
+
+        // --- UI Elements ---
+        const statsDisplay = document.getElementById('stats-display');
+        const messageArea = document.getElementById('message-area');
+        const moneyCounterElement = document.getElementById('money-counter');
+        
+        const marketButton = document.getElementById('market-button');
+        const marketModal = document.getElementById('market-modal');
+        const marketItemsContainer = document.getElementById('market-items-container');
+        const closeMarketButton = document.getElementById('close-market-button');
+        
+        const settingsButton = document.getElementById('settings-button');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsButton = document.getElementById('close-settings-button');
+        
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeValueDisplay = document.getElementById('volume-value-display');
+        const shadowToggle = document.getElementById('shadow-toggle');
+        const cullDistanceSlider = document.getElementById('cull-distance-slider');
+        const cullDistanceValueDisplay = document.getElementById('cull-distance-value-display');
+        
+        const gameClockElement = document.getElementById('game-clock');
+        const taxDueDisplayElement = document.getElementById('tax-due-display');
+        
+        const gameOverScreenElement = document.getElementById('game-over-screen');
+        const gameOverMessageElement = document.getElementById('game-over-message');
+        const finalScoreDisplayElement = document.getElementById('final-score-display');
+        const finalDaysDisplayElement = document.getElementById('final-days-display'); 
+
+        const saveGameButton = document.getElementById('save-game-button');
+        const loadGameButton = document.getElementById('load-game-button');
+        const scoreboardButton = document.getElementById('scoreboard-button');
+        const scoreboardModal = document.getElementById('scoreboard-modal');
+        const scoreboardListElement = document.getElementById('scoreboard-list');
+        const closeScoreboardButton = document.getElementById('close-scoreboard-button');
+
+        const confirmationModalElement = document.getElementById('confirmation-modal');
+        const confirmationTitleElement = document.getElementById('confirmation-title');
+        const confirmationPromptMessageElement = document.getElementById('confirmation-prompt-message');
+        const confirmYesButton = document.getElementById('confirm-yes-button');
+        const confirmNoButton = document.getElementById('confirm-no-button');
+        let currentConfirmAction = null; 
+
+
+        let lastFrameTime = performance.now();
+
+        // --- Sky Color Transition Data ---
+        const skyColorBlue = new THREE.Color(0x87CEEB);
+        const skyColorSunsetOrange = new THREE.Color(0xe5b050);
+        const skyColorDarkIndigo = new THREE.Color(0x373049);
+        const skyColorVeryDarkBlue = new THREE.Color(0x000020);
+        const skyColorPinkishDawn = new THREE.Color(0xABA3CC);
+
+        function timeToMinutesHelper(hour, minute) {
+            return hour * 60 + minute;
+        }
+
+        const skyKeyframes = [
+            { time: timeToMinutesHelper(3, 0), color: skyColorVeryDarkBlue },
+            { time: timeToMinutesHelper(6, 0), color: skyColorPinkishDawn },
+            { time: timeToMinutesHelper(7, 0), color: skyColorBlue },
+            { time: timeToMinutesHelper(15, 0), color: skyColorBlue },
+            { time: timeToMinutesHelper(18, 0), color: skyColorSunsetOrange },
+            { time: timeToMinutesHelper(20, 0), color: skyColorDarkIndigo },
+            { time: timeToMinutesHelper(21, 0), color: skyColorVeryDarkBlue } 
+        ];
+        
+        // --- Light Intensity Keyframes ---
+        const DAY_AMBIENT_INTENSITY = 0.7;
+        const NIGHT_AMBIENT_INTENSITY = 0.15; 
+        const DAY_DIRECTIONAL_INTENSITY = 0.9;
+        const NIGHT_DIRECTIONAL_INTENSITY = 0.1; 
+
+        const lightIntensityKeyframes = [
+            { time: timeToMinutesHelper(0, 0), ambient: NIGHT_AMBIENT_INTENSITY, directional: NIGHT_DIRECTIONAL_INTENSITY }, 
+            { time: timeToMinutesHelper(4, 30), ambient: NIGHT_AMBIENT_INTENSITY, directional: NIGHT_DIRECTIONAL_INTENSITY }, 
+            { time: timeToMinutesHelper(6, 0), ambient: DAY_AMBIENT_INTENSITY * 0.5, directional: DAY_DIRECTIONAL_INTENSITY * 0.4 }, 
+            { time: timeToMinutesHelper(7, 0), ambient: DAY_AMBIENT_INTENSITY, directional: DAY_DIRECTIONAL_INTENSITY },     
+            { time: timeToMinutesHelper(17, 30), ambient: DAY_AMBIENT_INTENSITY, directional: DAY_DIRECTIONAL_INTENSITY },   
+            { time: timeToMinutesHelper(19, 0), ambient: DAY_AMBIENT_INTENSITY * 0.6, directional: DAY_DIRECTIONAL_INTENSITY * 0.5 }, 
+            { time: timeToMinutesHelper(20, 30), ambient: NIGHT_AMBIENT_INTENSITY, directional: NIGHT_DIRECTIONAL_INTENSITY }, 
+            { time: timeToMinutesHelper(23, 59), ambient: NIGHT_AMBIENT_INTENSITY, directional: NIGHT_DIRECTIONAL_INTENSITY }  
+        ];
+
+        function calculateCurrentSkyColor(currentHour, currentMinute) {
+            const currentTimeInMinutes = timeToMinutesHelper(currentHour, currentMinute);
+            let startKeyframe, endKeyframe;
+
+            for (let i = 0; i < skyKeyframes.length - 1; i++) {
+                if (currentTimeInMinutes >= skyKeyframes[i].time && currentTimeInMinutes <= skyKeyframes[i+1].time) {
+                    startKeyframe = skyKeyframes[i];
+                    endKeyframe = skyKeyframes[i+1];
+                    break;
+                }
+            }
+            
+            if (!startKeyframe) { 
+                if (currentTimeInMinutes >= skyKeyframes[skyKeyframes.length - 1].time || currentTimeInMinutes < skyKeyframes[0].time) {
+                    // Handle wrap around midnight for sky color (between last keyframe and first)
+                    startKeyframe = skyKeyframes[skyKeyframes.length - 1];
+                    endKeyframe = skyKeyframes[0];
+                     const effectiveTime = currentTimeInMinutes < startKeyframe.time ? currentTimeInMinutes + MINS_IN_LOGICAL_DAY : currentTimeInMinutes;
+                    const segmentDuration = (endKeyframe.time + MINS_IN_LOGICAL_DAY) - startKeyframe.time;
+                    const timeIntoSegment = effectiveTime - startKeyframe.time;
+                    const progress = segmentDuration === 0 ? 0 : timeIntoSegment / segmentDuration;
+                    return startKeyframe.color.clone().lerp(endKeyframe.color, progress);
+                }
+                 // Default or if something goes wrong with keyframe logic
+                return skyKeyframes[skyKeyframes.length -1]?.color.clone() || skyColorVeryDarkBlue.clone();
+            }
+
+            if (startKeyframe.time === endKeyframe.time) {
+                return startKeyframe.color.clone();
+            }
+
+            const segmentDuration = endKeyframe.time - startKeyframe.time;
+            const timeIntoSegment = currentTimeInMinutes - startKeyframe.time;
+            const progress = segmentDuration === 0 ? 0 : timeIntoSegment / segmentDuration;
+
+            return startKeyframe.color.clone().lerp(endKeyframe.color, progress);
+        }
+
+        function calculateCurrentLightIntensities(currentHour, currentMinute) {
+            const currentTimeInMinutes = timeToMinutesHelper(currentHour, currentMinute);
+            let startKeyframe, endKeyframe;
+            let progress;
+
+            if (currentTimeInMinutes >= lightIntensityKeyframes[lightIntensityKeyframes.length - 1].time) {
+                // After the last keyframe, before midnight wrap
+                startKeyframe = lightIntensityKeyframes[lightIntensityKeyframes.length - 1];
+                endKeyframe = lightIntensityKeyframes[0]; // Target is the first keyframe of next day
+                const segmentDuration = (endKeyframe.time + MINS_IN_LOGICAL_DAY) - startKeyframe.time;
+                const timeIntoSegment = currentTimeInMinutes - startKeyframe.time;
+                progress = segmentDuration === 0 ? 0 : timeIntoSegment / segmentDuration;
+            } else if (currentTimeInMinutes < lightIntensityKeyframes[0].time) {
+                // Before the first keyframe (early morning, after midnight wrap)
+                startKeyframe = lightIntensityKeyframes[lightIntensityKeyframes.length - 1]; // Previous day's last
+                endKeyframe = lightIntensityKeyframes[0];
+                const segmentDuration = (endKeyframe.time + MINS_IN_LOGICAL_DAY) - startKeyframe.time;
+                const timeIntoSegment = (currentTimeInMinutes + MINS_IN_LOGICAL_DAY) - startKeyframe.time;
+                progress = segmentDuration === 0 ? 0 : timeIntoSegment / segmentDuration;
+            } else {
+                // Standard case: between two keyframes on the same day
+                for (let i = 0; i < lightIntensityKeyframes.length - 1; i++) {
+                    if (currentTimeInMinutes >= lightIntensityKeyframes[i].time && currentTimeInMinutes < lightIntensityKeyframes[i+1].time) {
+                        startKeyframe = lightIntensityKeyframes[i];
+                        endKeyframe = lightIntensityKeyframes[i+1];
+                        break;
+                    }
+                }
+                if (!startKeyframe) { // Should be caught by earlier conditions or loop
+                    return { ambient: NIGHT_AMBIENT_INTENSITY, directional: NIGHT_DIRECTIONAL_INTENSITY };
+                }
+                if (startKeyframe.time === endKeyframe.time) {
+                     return { ambient: startKeyframe.ambient, directional: startKeyframe.directional };
+                }
+                const segmentDuration = endKeyframe.time - startKeyframe.time;
+                const timeIntoSegment = currentTimeInMinutes - startKeyframe.time;
+                progress = segmentDuration === 0 ? 0 : timeIntoSegment / segmentDuration;
+            }
+            
+            return {
+                ambient: startKeyframe.ambient + (endKeyframe.ambient - startKeyframe.ambient) * progress,
+                directional: startKeyframe.directional + (endKeyframe.directional - startKeyframe.directional) * progress
+            };
+        }
+
+
+        // --- Initialization ---
+        function init() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGainNode = audioContext.createGain();
+                masterGainNode.connect(audioContext.destination);
+                masterGainNode.gain.value = 1; 
+            } catch (e) {
+                showMessage("Web Audio API not supported. Game will have no sound.");
+                console.warn("Web Audio API not supported:", e);
+                audioContext = null;
+            }
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); 
+            scene.fog = new THREE.Fog(0x87CEEB, environmentElementCullingDistance * 0.3, environmentElementCullingDistance * 0.9);
+            
+            document.addEventListener('visibilitychange', handleVisibilityChange, false);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.autoUpdate = false; 
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            ambientLight = new THREE.AmbientLight(0xffffff, DAY_AMBIENT_INTENSITY); // Initialize with a default
+            scene.add(ambientLight);
+            directionalLight = new THREE.DirectionalLight(0xffffff, DAY_DIRECTIONAL_INTENSITY); // Initialize with a default
+            directionalLight.position.set(50, 80, 60);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = worldSize * 1.5;
+            directionalLight.shadow.camera.left = -worldSize / 1.5;
+            directionalLight.shadow.camera.right = worldSize / 1.5;
+            directionalLight.shadow.camera.top = worldSize / 1.5;
+            directionalLight.shadow.camera.bottom = -worldSize / 1.5;
+            scene.add(directionalLight);
+
+            createPigModel();
+            pigBaseY = pig.position.y; 
+            createPigShadow();
+            camera.lookAt(pig.position.clone().add(new THREE.Vector3(0,0.5,0)));
+
+
+            createGroundAndEnvironment();
+            createPerimeterFence();
+
+            truffleSpecies.forEach(s => {
+                s.currentPrice = s.basePrice;
+                s.priceHistory = [s.basePrice]; 
+            });
+
+            spawnInitialTruffles(); 
+            
+            updateStatsUI();
+            updateMoneyUI();
+            updateTaxDueDisplay();
+            initializeSettings();
+            checkLoadButtonState(); 
+
+            initialSmellDetectionRange = smellDetectionRange; 
+            smellBoostIconElement = document.getElementById('smell-boost-icon');
+            if (smellBoostIconElement) { 
+                 smellBoostIconElement.style.display = 'none'; 
+                 smellBoostIconElement.title = "50% larger detection radius for 1 minute."; 
+            }
+
+
+            nextAmbientSoundTriggerTime = performance.now() + INITIAL_AMBIENT_SOUND_DELAY; 
+            isFirstAmbientSoundPlay = true; 
+
+            // Event Listeners
+            marketButton.addEventListener('click', toggleMarketModal);
+            closeMarketButton.addEventListener('click', toggleMarketModal);
+            settingsButton.addEventListener('click', toggleSettingsModal);
+            closeSettingsButton.addEventListener('click', toggleSettingsModal);
+            volumeSlider.addEventListener('input', updateVolume);
+            shadowToggle.addEventListener('change', toggleAllShadows);
+            cullDistanceSlider.addEventListener('input', updateCullDistance);
+
+            saveGameButton.addEventListener('click', () => promptSaveGame()); 
+            loadGameButton.addEventListener('click', () => promptLoadGame()); 
+            scoreboardButton.addEventListener('click', toggleScoreboardModal);
+            closeScoreboardButton.addEventListener('click', toggleScoreboardModal);
+
+            confirmYesButton.addEventListener('click', () => {
+                if (typeof currentConfirmAction === 'function') {
+                    currentConfirmAction();
+                }
+                hideConfirmationModal();
+            });
+            confirmNoButton.addEventListener('click', hideConfirmationModal);
+
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown); 
+            window.addEventListener('resize', onWindowResize);
+
+            setInterval(triggerMarketFluctuation, marketFluctuationInterval);
+
+            renderer.shadowMap.needsUpdate = true;
+
+            showMessage("The search begins. Tax will be deducted at 5:00AM.", 9000);
+            animate();
+        }
+
+        function createPigModel() {
+            pig = new THREE.Group();
+            pig.position.y = 0.45; 
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x92786B }); 
+            const darkerPinkMaterial = new THREE.MeshPhongMaterial({color: 0x926161}); 
+            const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.6, 1.8, 12); 
+            bodyGeometry.computeBoundingBox();
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.rotation.x = Math.PI / 2; body.position.y = 0.4; body.castShadow = false; 
+            pig.add(body);
+            const headGeometry = new THREE.SphereGeometry(0.4, 12, 12); 
+            headGeometry.computeBoundingBox();
+            const head = new THREE.Mesh(headGeometry, bodyMaterial);
+            head.position.set(0, body.position.y + 0.1, -(1.8/2 - 0.1)); head.castShadow = false;
+            pig.add(head);
+            const earGeometry = new THREE.ConeGeometry(0.22, 0.6, 6); 
+            earGeometry.computeBoundingBox();
+            const earL = new THREE.Mesh(earGeometry, darkerPinkMaterial);
+            earL.position.set(0.28, head.position.y + 0.35, head.position.z + 0.15);
+            earL.rotation.x = Math.PI * 0.15; earL.rotation.z = -Math.PI / 4.5;
+            earL.castShadow = false; pig.add(earL);
+            const earR = earL.clone(); earR.position.x = -earL.position.x; earR.rotation.z = -earL.rotation.z;
+            earR.castShadow = false; pig.add(earR);
+            const legGeometry = new THREE.CylinderGeometry(0.12, 0.1, 0.8, 6); 
+            legGeometry.computeBoundingBox();
+            const legPositions = [
+                {x: 0.35, y: -0.05, z: -0.6}, {x: -0.35, y: -0.05, z: -0.6}, 
+                {x: 0.35, y: -0.05, z: 0.6}, {x: -0.35, y: -0.05, z: 0.6}  
+            ];
+            legPositions.forEach(pos => {
+                const leg = new THREE.Mesh(legGeometry, bodyMaterial);
+                leg.position.set(pos.x, pos.y, pos.z);
+                leg.castShadow = false; pig.add(leg);
+            });
+            scene.add(pig);
+            pig.position.x = -10
+            pig.position.z = -15
+        }
+
+        function createPigShadow() {
+            const shadowGeo = new THREE.CircleGeometry(0.7, 12); 
+            const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
+            pigShadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+            pigShadowMesh.rotation.x = -Math.PI / 2; 
+            pigShadowMesh.position.y = 0.01; 
+            scene.add(pigShadowMesh);
+        }
+
+        function updatePigShadowPosition() {
+            if (pig && pigShadowMesh) {
+                pigShadowMesh.position.x = pig.position.x;
+                pigShadowMesh.position.z = pig.position.z;
+            }
+        }
+
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                if (!isGameOver && animationFrameId) { 
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null; 
+                    gamePausedByVisibility = true;
+                    showMessage("Game Paused - Tabbed Out", 0); 
+
+                    if (audioContext && audioContext.state === "running") {
+                        audioContext.suspend().catch(e => console.warn("AudioContext suspend error:", e));
+                    }
+                }
+            } else {
+                if (gamePausedByVisibility) { 
+                    gamePausedByVisibility = false;
+                    lastFrameTime = performance.now(); 
+
+                    if (!isGameOver) { 
+                        if (!animationFrameId) { 
+                            animate();
+                        }
+                        showMessage("Game Resumed", 2000); 
+                    }
+
+                    if (audioContext && audioContext.state === "suspended") {
+                        audioContext.resume().catch(e => console.warn("AudioContext resume error:", e));
+                    }
+                }
+            }
+        }
+
+        function createGroundAndEnvironment() {
+            allTrees.forEach(treePart => scene.remove(treePart)); allTrees.length = 0;
+            allShrubs.forEach(shrub => scene.remove(shrub)); allShrubs.length = 0;
+            allAntNests.forEach(nest => scene.remove(nest)); allAntNests.length = 0;
+            allMudPatches.forEach(patch => scene.remove(patch)); allMudPatches.length = 0;
+            allFallenLogs.forEach(logGroup => { 
+                logGroup.children.forEach(child => {
+                    if (child.isGroup) { 
+                        child.children.forEach(grandchild => scene.remove(grandchild));
+                    }
+                    scene.remove(child);
+                });
+                scene.remove(logGroup);
+            }); 
+            allFallenLogs.length = 0;
+            allWells.forEach(wellGroup => { 
+                wellGroup.children.forEach(child => {
+                     if (child.isGroup) {
+                        child.children.forEach(grandchild => scene.remove(grandchild));
+                    } else if (child.geometry) { 
+                        child.geometry.dispose();
+                    }
+                    if (child.material) { 
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(mat => mat.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                    scene.remove(child);
+                });
+                scene.remove(wellGroup);
+            });
+            allWells.length = 0;
+            
+            const oldGroundPlanes = scene.children.filter(child => child.name === 'groundPlane');
+            oldGroundPlanes.forEach(plane => scene.remove(plane));
+
+            const groundGeometry = new THREE.PlaneGeometry(worldSize * 1.5, worldSize * 1.5);
+            const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x888C4F, side: THREE.DoubleSide });
+            const FgroundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+            FgroundPlane.name = 'FgroundPlane'; 
+            FgroundPlane.rotation.x = -Math.PI / 2;
+            FgroundPlane.position.set(0, -0.05, 0);
+            FgroundPlane.receiveShadow = true;
+            scene.add(FgroundPlane);
+
+            biomeRegions.forEach(region => {
+                const groundGeometry = new THREE.PlaneGeometry(region.xMax - region.xMin, region.zMax - region.zMin);
+                const groundMaterial = new THREE.MeshPhongMaterial({ color: region.color, side: THREE.DoubleSide });
+                const groundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+                groundPlane.name = 'groundPlane'; 
+                groundPlane.rotation.x = -Math.PI / 2;
+                groundPlane.position.set((region.xMin + region.xMax) / 2, 0, (region.zMin + region.zMax) / 2);
+                groundPlane.receiveShadow = true;
+                scene.add(groundPlane);
+
+                const numTrees = Math.floor((region.xMax - region.xMin) * (region.zMax - region.zMin) * region.treeDensity);
+                for (let i = 0; i < numTrees; i++) {
+                    const elX = Math.random() * (region.xMax - region.xMin) + region.xMin;
+                    const elZ = Math.random() * (region.zMax - region.zMin) + region.zMin;
+                    createTree(elX, elZ);
+                }
+                if (region.shrubDensity && region.type !== 'swamp') {
+                    const numShrubs = Math.floor((region.xMax - region.xMin) * (region.zMax - region.zMin) * region.shrubDensity);
+                    for (let i = 0; i < numShrubs; i++) {
+                        const elX = Math.random() * (region.xMax - region.xMin) + region.xMin;
+                        const elZ = Math.random() * (region.zMax - region.zMin) + region.zMin;
+                        createShrub(elX, elZ);
+                    }
+                }
+                if (region.antNestDensity) {
+                     const numAntNests = Math.floor((region.xMax - region.xMin) * (region.zMax - region.zMin) * region.antNestDensity);
+                    for (let i = 0; i < numAntNests; i++) {
+                        const elX = Math.random() * (region.xMax - region.xMin) + region.xMin;
+                        const elZ = Math.random() * (region.zMax - region.zMin) + region.zMin;
+                        createAntNest(elX, elZ);
+                    }
+                }
+                if (region.type === 'swamp' && region.mudChance) {
+                    const numMudPatches = Math.floor((region.xMax - region.xMin) * (region.zMax - region.zMin) * region.mudChance * 0.1);
+                     for (let i = 0; i < numMudPatches; i++) {
+                        const mudX = Math.random() * (region.xMax - region.xMin) + region.xMin;
+                        const mudZ = Math.random() * (region.zMax - region.zMin) + region.zMin;
+                        createMudPatch(mudX, mudZ);
+                     }
+                }
+                if (region.type === 'heath') {
+                    if (Math.random() < 0.45) { 
+                        const wellX = Math.random() * (region.xMax - region.xMin) + region.xMin;
+                        const wellZ = Math.random() * (region.zMax - region.zMin) + region.zMin;
+                        createWell(wellX, wellZ);
+                    }
+                }
+            });
+
+            const forestAndSwampRegions = biomeRegions.filter(r => r.type === 'forest' || r.type === 'swamp');
+            for (let i = 0; i < 4; i++) {
+                if (forestAndSwampRegions.length > 0) {
+                    const region = forestAndSwampRegions[Math.floor(Math.random() * forestAndSwampRegions.length)];
+                    const logX = Math.random() * (region.xMax - region.xMin) + region.xMin;
+                    const logZ = Math.random() * (region.zMax - region.zMin) + region.zMin;
+                    createFallenLog(logX, logZ);
+                }
+            }
+        }
+
+        // --- Add this new function somewhere ---
+        function createPerimeterFence() {
+            const fenceHeight = 1.5;
+            const postRadius = 0.05;
+            const postHeight = fenceHeight * 1.1;
+            const fenceColor = 0x444444; // Dark grey
+            const postMaterial = new THREE.MeshPhongMaterial({ color: fenceColor });
+            const wireMaterial = new THREE.LineBasicMaterial({ color: 0x101010 });
+
+            const halfWorld = worldSize / 2;
+            const postDistance = 5; // Distance between posts
+
+            // Function to create a single post
+            function createPost(x, z) {
+                const postGeometry = new THREE.CylinderGeometry(postRadius, postRadius, postHeight, 6);
+                const post = new THREE.Mesh(postGeometry, postMaterial);
+                post.position.set(x, postHeight / 2, z);
+                post.castShadow = true;
+                scene.add(post);
+            }
+
+            // Create posts along edges
+            for (let i = -halfWorld; i <= halfWorld; i += postDistance) {
+                createPost(i, -halfWorld); // Bottom edge
+                createPost(i, halfWorld);  // Top edge
+                if (i > -halfWorld && i < halfWorld) { // Avoid corner duplicates
+                    createPost(-halfWorld, i); // Left edge
+                    createPost(halfWorld, i);  // Right edge
+                }
+            }
+
+            // Create wire lines (simplified as straight lines between corners for now)
+            // A proper mesh fence is more complex
+            const wireLevels = [fenceHeight * 0.3, fenceHeight * 0.6, fenceHeight * 0.9];
+            wireLevels.forEach(yLevel => {
+                const points = [
+                    new THREE.Vector3(-halfWorld, yLevel, -halfWorld),
+                    new THREE.Vector3(halfWorld, yLevel, -halfWorld),
+                    new THREE.Vector3(halfWorld, yLevel, halfWorld),
+                    new THREE.Vector3(-halfWorld, yLevel, halfWorld),
+                    new THREE.Vector3(-halfWorld, yLevel, -halfWorld) // Close the loop
+                ];
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(geometry, wireMaterial);
+                scene.add(line);
+            });
+        }
+
+        function createTree(x, z) {
+            const trunkHeight = Math.random() * 5 + 4; const trunkRadius = Math.random() * 0.4 + 0.25;
+            const trunkGeometry = new THREE.CylinderGeometry(trunkRadius, trunkRadius * 1.1, trunkHeight, 5);
+            trunkGeometry.computeBoundingBox();
+            const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x593521 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.set(x, trunkHeight / 2, z); trunk.castShadow = true; trunk.receiveShadow = true;
+            scene.add(trunk); allTrees.push(trunk);
+            const leavesHeight = Math.random() * 4 + 3; const leavesRadius = Math.random() * 2 + 1.5;
+            const leavesGeometry = new THREE.ConeGeometry(leavesRadius, leavesHeight, 5);
+            leavesGeometry.computeBoundingBox();
+            const leavesMaterial = new THREE.MeshPhongMaterial({ color: 0x255C3D });
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.set(x, trunkHeight + leavesHeight / 2 - 0.5, z); leaves.castShadow = true;
+            scene.add(leaves); allTrees.push(leaves);
+        }
+
+        function createShrub(x, z) {
+            const shrubMaterial = new THREE.MeshPhongMaterial({ color: 0x556B2F });
+            const shrubRadius = Math.random() * 0.4 + 0.5;
+            const shrubGeometry = new THREE.SphereGeometry(shrubRadius, 5, 4);
+            shrubGeometry.computeBoundingBox();
+            const shrub = new THREE.Mesh(shrubGeometry, shrubMaterial);
+            shrub.position.set(x, shrubRadius * 0.4, z);
+            shrub.castShadow = true; scene.add(shrub); allShrubs.push(shrub);
+        }
+
+        function createAntNest(x, z) {
+            const nestRadius = Math.random() * 1.5 + 1; const nestHeight = nestRadius * (Math.random() * 0.3 + 0.4);
+            const nestGeometry = new THREE.ConeGeometry(nestRadius, nestHeight, 6, 1);
+            nestGeometry.computeBoundingBox();
+            const nestMaterial = new THREE.MeshPhongMaterial({ color: 0x964B00 });
+            const antNest = new THREE.Mesh(nestGeometry, nestMaterial);
+            antNest.position.set(x, nestHeight / 2, z); antNest.castShadow = true; antNest.receiveShadow = true;
+            scene.add(antNest); allAntNests.push(antNest);
+        }
+
+        function createMudPatch(x, z) {
+            const baseSize = 15; const randomFactor = 7;
+            const mudSize = (Math.random() * randomFactor + baseSize) * 0.7;
+            const mudGeometry = new THREE.CircleGeometry(mudSize / 2, 8);
+            mudGeometry.computeBoundingBox();
+            const mudMaterial = new THREE.MeshPhongMaterial({ color: 0x3A2B1F, side: THREE.DoubleSide });
+            const mudPatch = new THREE.Mesh(mudGeometry, mudMaterial);
+            mudPatch.rotation.x = -Math.PI / 2; mudPatch.position.set(x, 0.01, z);
+            mudPatch.castShadow = false; mudPatch.receiveShadow = true;
+            scene.add(mudPatch); allMudPatches.push(mudPatch);
+        }
+
+        function createFallenLog(x, z) {
+            const logGroup = new THREE.Group(); 
+            logGroup.position.set(x, 0, z);
+
+            const logRadius = Math.random() * 0.3 + 0.2; 
+            const logLength = Math.random() * 2 + 2.5;   
+            const logGeometry = new THREE.CylinderGeometry(logRadius, logRadius, logLength, 8);
+            logGeometry.computeBoundingBox();
+            const logMaterial = new THREE.MeshPhongMaterial({ color: 0x6F4E37 }); 
+            const logMesh = new THREE.Mesh(logGeometry, logMaterial);
+            logMesh.rotation.z = Math.PI / 2; 
+            logMesh.position.y = logRadius;   
+            logMesh.castShadow = true;
+            logMesh.receiveShadow = true;
+            logGroup.add(logMesh);
+
+            const mushroomStemRadius = 0.05;
+            const mushroomStemHeight = 0.15;
+            const mushroomCapRadius = 0.18;
+            const mushroomCapHeight = 0.1;
+
+            const stemGeometry = new THREE.CylinderGeometry(mushroomStemRadius, mushroomStemRadius, mushroomStemHeight, 6);
+            stemGeometry.computeBoundingBox();
+            const stemMaterial = new THREE.MeshPhongMaterial({ color: 0xF0E68C }); 
+            const mushroomStem = new THREE.Mesh(stemGeometry, stemMaterial);
+            
+            const mushroomXOffset = (Math.random() - 0.5) * (logLength * 0.9); 
+            mushroomStem.position.set(mushroomXOffset, logRadius * 2 + mushroomStemHeight / 2, 0);
+            mushroomStem.castShadow = true;
+            logGroup.add(mushroomStem);
+
+            const capGeometry = new THREE.CylinderGeometry(mushroomCapRadius * 0.7, mushroomCapRadius, mushroomCapHeight, 8); 
+            capGeometry.computeBoundingBox();
+            const capMaterial = new THREE.MeshPhongMaterial({ color: 0xB22222 }); 
+            const mushroomCap = new THREE.Mesh(capGeometry, capMaterial);
+            mushroomCap.position.y = mushroomStemHeight / 2 + mushroomCapHeight / 2;
+            mushroomCap.castShadow = true;
+            mushroomStem.add(mushroomCap); 
+
+            scene.add(logGroup);
+            allFallenLogs.push(logGroup);
+        }
+
+        function createWell(x, z) {
+            const wellGroup = new THREE.Group();
+            wellGroup.position.set(x, 0, z);
+
+            const scaleFactor = 2.5; 
+            const wellBaseRadius = 0.8 * scaleFactor;
+            const wellBaseHeight = 0.6 * scaleFactor;
+            const wellWallThickness = 0.25 * scaleFactor;
+
+            const wellBaseGeo = new THREE.CylinderGeometry(wellBaseRadius, wellBaseRadius, wellBaseHeight, 12);
+            wellBaseGeo.computeBoundingBox();
+            const wellMaterial = new THREE.MeshPhongMaterial({ color: 0x51585F }); 
+            const wellBase = new THREE.Mesh(wellBaseGeo, wellMaterial);
+            wellBase.position.y = wellBaseHeight / 2; 
+            wellBase.castShadow = true;
+            wellBase.receiveShadow = true;
+            wellGroup.add(wellBase);
+
+            const holeRadius = wellBaseRadius - wellWallThickness * 1.2; 
+            const holeGeometry = new THREE.CircleGeometry(holeRadius, 12);
+            holeGeometry.computeBoundingBox();
+            const holeMaterial = new THREE.MeshBasicMaterial({ color: 0x191919, side: THREE.DoubleSide });
+            const wellHole = new THREE.Mesh(holeGeometry, holeMaterial);
+            wellHole.rotation.x = -Math.PI / 2;
+            wellHole.position.y = (wellBaseHeight / 2) + 0.02; 
+            wellBase.add(wellHole); 
+
+            const postHeight = 1 * scaleFactor;
+            const postRadius = 0.08 * scaleFactor;
+            const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, postHeight, 6);
+            postGeo.computeBoundingBox();
+            const woodMaterial = new THREE.MeshPhongMaterial({ color: 0x4b3626 }); 
+
+            const post1 = new THREE.Mesh(postGeo, woodMaterial);
+            post1.position.set(wellBaseRadius * 0.7, wellBaseHeight + postHeight / 2, 0);
+            post1.castShadow = true;
+            wellGroup.add(post1);
+
+            const post2 = new THREE.Mesh(postGeo, woodMaterial);
+            post2.position.set(-wellBaseRadius * 0.7, wellBaseHeight + postHeight / 2, 0);
+            post2.castShadow = true;
+            wellGroup.add(post2);
+
+            const roofRadius = wellBaseRadius * 1.2; 
+            const roofHeight = 0.8 * scaleFactor;
+            const roofGeometry = new THREE.ConeGeometry(roofRadius, roofHeight, 8);
+            roofGeometry.computeBoundingBox();
+            const roofMaterial = new THREE.MeshPhongMaterial({ color: 0x4b3626 }); 
+            const wellRoof = new THREE.Mesh(roofGeometry, roofMaterial);
+            wellRoof.position.y = wellBaseHeight + postHeight + roofHeight / 2 - (0.1 * scaleFactor); 
+            wellRoof.castShadow = true;
+            wellGroup.add(wellRoof);
+            
+            scene.add(wellGroup);
+            allWells.push(wellGroup);
+        }
+
+
+        const reusableBoundingBox = new THREE.Box3();
+        let shadowMapNeedsUpdateFlag = false;
+
+        function cullElementArray(elements, applyFrustumCulling = true) {
+            if (!pig) return; const pigPos = pig.position;
+            elements.forEach(element => { 
+                const worldPosition = new THREE.Vector3();
+                element.getWorldPosition(worldPosition); 
+
+                const distanceSq = pigPos.distanceToSquared(worldPosition);
+                let isVisibleByDistance = distanceSq <= environmentElementCullingDistance * environmentElementCullingDistance;
+                let isVisibleByFrustum = true;
+                
+                let childrenToUpdateShadows = []; 
+                
+                if (element.isGroup) {
+                    element.traverseVisible(obj => { 
+                        if (obj.isMesh) childrenToUpdateShadows.push(obj);
+                    });
+                } else if (element.isMesh) {
+                    childrenToUpdateShadows.push(element);
+                }
+
+
+                if (isVisibleByDistance && applyFrustumCulling) {
+                    const boundingBoxToTest = new THREE.Box3();
+                    if (element.isGroup) {
+                        boundingBoxToTest.setFromObject(element, true); 
+                        if (boundingBoxToTest.isEmpty()) {
+                            isVisibleByFrustum = true; 
+                        } else {
+                            isVisibleByFrustum = frustum.intersectsBox(boundingBoxToTest);
+                        }
+                    } else if (element.geometry) { 
+                         if (!element.geometry.boundingBox) element.geometry.computeBoundingBox();
+                         reusableBoundingBox.copy(element.geometry.boundingBox).applyMatrix4(element.matrixWorld);
+                         isVisibleByFrustum = frustum.intersectsBox(reusableBoundingBox);
+                    }
+                }
+                
+                const finalVisibility = isVisibleByDistance && isVisibleByFrustum;
+                
+                if (element.visible !== finalVisibility) {
+                    element.visible = finalVisibility;
+                    shadowMapNeedsUpdateFlag = true; 
+                }
+
+                if (finalVisibility) {
+                    childrenToUpdateShadows.forEach(child => {
+                        const oldCastShadow = child.castShadow;
+                        if (elements === allMudPatches || (child.parent && child.parent.userData && child.parent.userData.isMudPatch)) {
+                             child.castShadow = false;
+                        } else {
+                            child.castShadow = renderer.shadowMap.enabled; 
+                        }
+                        if (oldCastShadow !== child.castShadow) {
+                            shadowMapNeedsUpdateFlag = true;
+                        }
+                    });
+                } else { 
+                     childrenToUpdateShadows.forEach(child => {
+                        if (child.castShadow) {
+                            child.castShadow = false;
+                            shadowMapNeedsUpdateFlag = true;
+                        }
+                    });
+                }
+            });
+        }
+
+        function updateEnvironmentVisibility() {
+            if (!pig) return;
+            camera.updateMatrixWorld(); camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+            cameraViewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+            frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
+            shadowMapNeedsUpdateFlag = false;
+            cullElementArray(allTrees, false); 
+            cullElementArray(allShrubs, true);
+            cullElementArray(allAntNests, true);
+            cullElementArray(allMudPatches, true);
+            cullElementArray(allFallenLogs, true); 
+            cullElementArray(allWells, true);       
+
+            if (shadowMapNeedsUpdateFlag && renderer.shadowMap.enabled) {
+                renderer.shadowMap.needsUpdate = true;
+            }
+        }
+
+
+        function getTruffleRarityWeights(biomeType) {
+            switch (biomeType) {
+                case 'forest': return [ { id: 'perigord-black', weight: 35 }, { id: 'summer-truffle', weight: 32 }, { id: 'bianchetto-truffle', weight: 39 }, { id: 'italian-white', weight: 0 }, { id: 'prized-white-alba', weight: 0 } ];
+                case 'swamp':  return [ { id: 'perigord-black', weight: 10 }, { id: 'summer-truffle', weight: 20 }, { id: 'bianchetto-truffle', weight: 60 }, { id: 'italian-white', weight: 5 }, { id: 'prized-white-alba', weight: 0.5 } ];
+                case 'heath':  return [ { id: 'perigord-black', weight: 0 }, { id: 'summer-truffle', weight: 55 }, { id: 'bianchetto-truffle', weight: 40 }, { id: 'italian-white', weight: 6 }, { id: 'prized-white-alba', weight: 1.5 } ];
+                default:       return truffleSpecies.map(s => ({ id: s.id, weight: 1 }));
+            }
+        }
+         function getPrimaryBiomeForTruffle(truffleId) {
+            let rarityString = "SELL (Click) | ";
+            biomeRegions.forEach((biome, index) => {
+                const weightsForThisBiome = getTruffleRarityWeights(biome.type);
+                const truffleWeightInBiome = weightsForThisBiome.find(w => w.id === truffleId);
+                let qualitativeRarity = "Unknown";
+                if (truffleWeightInBiome) {
+                    const weight = truffleWeightInBiome.weight;
+                    if (weight >= 40) qualitativeRarity = "Very Common";
+                    else if (weight >= 25) qualitativeRarity = "Common";
+                    else if (weight >= 10) qualitativeRarity = "Uncommon";
+                    else if (weight >= 4) qualitativeRarity = "Rare";
+                    else if (weight > 1) qualitativeRarity = "Thing of legend";
+                    else qualitativeRarity = "Not Found";
+                }
+                rarityString += `${biome.type.charAt(0).toUpperCase() + biome.type.slice(1)}: ${qualitativeRarity}`;
+                if (index < biomeRegions.length - 1) rarityString += ", ";
+            });
+            return rarityString;
+        }
+
+        function getWeightedRandomTruffle(biomeType) {
+            const weights = getTruffleRarityWeights(biomeType);
+            const totalWeight = weights.reduce((sum, item) => sum + item.weight, 0);
+            let random = Math.random() * totalWeight;
+            for (const item of weights) {
+                if (random < item.weight) return truffleSpecies.find(s => s.id === item.id);
+                random -= item.weight;
+            }
+            return truffleSpecies[Math.floor(Math.random() * truffleSpecies.length)]; 
+        }
+
+        function spawnInitialTruffles() {
+            truffles.forEach(truffle => {
+                if (truffle.visibleMesh) scene.remove(truffle.visibleMesh);
+                const emitter = truffleAudioEmitters.get(truffle.id);
+                if (emitter && audioContext && audioContext.state === "running") {
+                    try { emitter.oscillator.stop(); } catch(e) {}
+                    emitter.gainNode.disconnect();
+                }
+                truffleAudioEmitters.delete(truffle.id);
+            });
+            truffles.length = 0; 
+
+            for (let i = 0; i < maxTrufflesInWorld; i++) spawnNewTruffle();
+        }
+
+        function spawnNewTruffle() {
+            if (isGameOver || truffles.length >= maxTrufflesInWorld) return;
+            const region = biomeRegions[Math.floor(Math.random() * biomeRegions.length)];
+            const selectedSpecies = getWeightedRandomTruffle(region.type);
+            const truffleId = `truffle-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            const x = Math.random() * (region.xMax - region.xMin) + region.xMin;
+            const z = Math.random() * (region.zMax - region.zMin) + region.zMin;
+            const truffleData = {
+                id: truffleId, speciesName: selectedSpecies.name, speciesId: selectedSpecies.id,
+                baseFreq: selectedSpecies.baseFreq, color: selectedSpecies.color,
+                position: new THREE.Vector3(x, -0.5, z), 
+                collected: false, soundDeactivated: false, visibleMesh: null
+            };
+            truffles.push(truffleData);
+            if (audioContext && audioContext.state === "running") {
+                createTruffleAudioEmitter(truffleData);
+            }
+        }
+
+        function createTruffleAudioEmitter(truffle) {
+            if (!audioContext || !masterGainNode || audioContext.state !== "running" || truffle.soundDeactivated || isGameOver) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(truffle.baseFreq, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime); 
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGainNode);
+            oscillator.start();
+            truffleAudioEmitters.set(truffle.id, { oscillator, gainNode, isPulsing: false, lastPulseTime: 0 });
+        }
+
+        function updateTruffleSounds() {
+            if (!audioContext || audioContext.state !== "running" || !pig || isGameOver) return;
+            truffles.forEach(truffle => {
+                if (truffle.collected || truffle.soundDeactivated) return;
+                const emitter = truffleAudioEmitters.get(truffle.id);
+                if (!emitter) { 
+                    if(truffleAudioEmitters.size < maxTrufflesInWorld && !truffle.soundDeactivated) createTruffleAudioEmitter(truffle);
+                    return;
+                }
+                const distance = pig.position.distanceTo(truffle.position);
+                let targetGain = 0;
+                if (distance < smellDetectionRange) {
+                    const normalizedDistance = 1 - (distance / smellDetectionRange);
+                    targetGain = normalizedDistance * normalizedDistance * 0.3; 
+                    const currentTime = audioContext.currentTime;
+                    if (distance < pulseThreshold && targetGain > 0.01) { 
+                        if (!emitter.isPulsing) emitter.isPulsing = true;
+                        const pulseRate = 3 + (1 - distance / pulseThreshold) * 5; 
+                        const pulseModulation = (Math.sin(currentTime * Math.PI * 2 * pulseRate) + 1) / 2; 
+                        targetGain *= (0.5 + pulseModulation * 0.8); 
+                        emitter.lastPulseTime = currentTime;
+                    } else {
+                        if (emitter.isPulsing) emitter.isPulsing = false;
+                    }
+                } else {
+                     if (emitter.isPulsing) emitter.isPulsing = false;
+                }
+                emitter.gainNode.gain.setTargetAtTime(Math.min(targetGain, 0.7), audioContext.currentTime, 0.05); 
+            });
+        }
+
+        function playDingSound() {
+            if (!audioContext || !masterGainNode || audioContext.state !== "running" || isGameOver) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(880, audioContext.currentTime); 
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGainNode);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        function playBellTollSound() {
+            if (!audioContext || !masterGainNode || audioContext.state !== "running" || isGameOver) return;
+            const time = audioContext.currentTime; const fundamental = 170; const duration = 2.8;
+            const osc1 = audioContext.createOscillator(); const gain1 = audioContext.createGain();
+            osc1.type = 'sine'; osc1.frequency.setValueAtTime(fundamental, time);
+            gain1.gain.setValueAtTime(0.25, time); gain1.gain.exponentialRampToValueAtTime(0.001, time + duration);
+            osc1.connect(gain1); gain1.connect(masterGainNode); osc1.start(time); osc1.stop(time + duration);
+            const osc2 = audioContext.createOscillator(); const gain2 = audioContext.createGain();
+            osc2.type = 'triangle'; osc2.frequency.setValueAtTime(fundamental * 2, time);
+            gain2.gain.setValueAtTime(0.15, time); gain2.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.8);
+            osc2.connect(gain2); gain2.connect(masterGainNode); osc2.start(time); osc2.stop(time + duration * 0.8);
+            const osc3 = audioContext.createOscillator(); const gain3 = audioContext.createGain();
+            osc3.type = 'sine'; osc3.frequency.setValueAtTime(fundamental * 3, time);
+            gain3.gain.setValueAtTime(0.1, time); gain3.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.6);
+            osc3.connect(gain3); gain3.connect(masterGainNode); osc3.start(time); osc3.stop(time + duration * 0.6);
+            const osc4 = audioContext.createOscillator(); const gain4 = audioContext.createGain();
+            osc4.type = 'sine'; osc4.frequency.setValueAtTime(fundamental * 5.5, time); 
+            gain4.gain.setValueAtTime(0.08, time); gain4.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+            osc4.connect(gain4); gain4.connect(masterGainNode); osc4.start(time); osc4.stop(time + 0.3);
+        }
+
+        function playPigTrottingSound() {
+            if (!audioContext || !masterGainNode || audioContext.state !== "running" || isGameOver) return;
+            const now = performance.now();
+            if (now - lastTrotSoundTime < MIN_TROT_INTERVAL) return; 
+            lastTrotSoundTime = now;
+            const time = audioContext.currentTime; const duration1 = 0.06; const duration2 = 0.07;
+            const freq1 = 120; const freq2 = 100; 
+            const lowPassFilter = audioContext.createBiquadFilter();
+            lowPassFilter.type = "lowpass"; lowPassFilter.frequency.setValueAtTime(400, time); 
+            lowPassFilter.connect(masterGainNode);
+            const osc1 = audioContext.createOscillator(); const gain1 = audioContext.createGain();
+            osc1.type = 'square'; osc1.frequency.setValueAtTime(freq1, time);
+            gain1.gain.setValueAtTime(0.08, time); gain1.gain.exponentialRampToValueAtTime(0.001, time + duration1);
+            osc1.connect(gain1); gain1.connect(lowPassFilter); osc1.start(time); osc1.stop(time + duration1);
+            const osc2 = audioContext.createOscillator(); const gain2 = audioContext.createGain();
+            osc2.type = 'triangle'; osc2.frequency.setValueAtTime(freq2, time + duration1 / 1.8);
+            gain2.gain.setValueAtTime(0.1, time + duration1 / 1.8);
+            gain2.gain.exponentialRampToValueAtTime(0.001, time + duration1 / 1.8 + duration2);
+            osc2.connect(gain2); gain2.connect(lowPassFilter);
+            osc2.start(time + duration1 / 1.8); osc2.stop(time + duration1 / 1.8 + duration2);
+        }
+
+        // --- Ambient Sound Functions ---
+        function playPluckNoteRevised(frequency, noteStartTime) {
+            if (!audioContext || !masterGainNode || audioContext.state !== "running" || isGameOver || frequency === null) return;
+
+            const peakGain = 0.1; 
+            const harmonics = [
+                { multiple: 1, amplitude: 1.0,  type: 'triangle' }, 
+                { multiple: 2, amplitude: 0.45, type: 'sine' },     
+                { multiple: 3, amplitude: 0.25, type: 'sine' },     
+                { multiple: 4, amplitude: 0.15, type: 'sine' },     
+                { multiple: 5, amplitude: 0.1,  type: 'sine' },     
+            ];
+
+            const noteOverallGainNode = audioContext.createGain();
+            noteOverallGainNode.connect(masterGainNode);
+
+            noteOverallGainNode.gain.setValueAtTime(0, noteStartTime); 
+            noteOverallGainNode.gain.linearRampToValueAtTime(peakGain, noteStartTime + AMBIENT_PLUCK_ATTACK);
+            const sustainLevel = peakGain * AMBIENT_PLUCK_SUSTAIN_MULTIPLIER;
+            noteOverallGainNode.gain.linearRampToValueAtTime(sustainLevel, noteStartTime + AMBIENT_PLUCK_ATTACK + AMBIENT_PLUCK_DECAY);
+            
+            const sustainEndTime = noteStartTime + AMBIENT_NOTE_DURATION;
+            noteOverallGainNode.gain.setValueAtTime(sustainLevel, sustainEndTime); 
+            
+            const releaseEndTime = sustainEndTime + AMBIENT_PLUCK_RELEASE;
+            noteOverallGainNode.gain.linearRampToValueAtTime(0, releaseEndTime);
+
+            harmonics.forEach(harmonicInfo => {
+                const osc = audioContext.createOscillator();
+                osc.type = harmonicInfo.type;
+                osc.frequency.setValueAtTime(frequency * harmonicInfo.multiple, noteStartTime);
+                
+                const harmonicSpecificGain = audioContext.createGain();
+                harmonicSpecificGain.gain.setValueAtTime(harmonicInfo.amplitude, noteStartTime); 
+
+                osc.connect(harmonicSpecificGain);
+                harmonicSpecificGain.connect(noteOverallGainNode); 
+                
+                osc.start(noteStartTime);
+                osc.stop(releaseEndTime + 0.1); 
+            });
+        }
+
+        function tryPlayAmbientMelody() {
+            if (isGameOver || !audioContext || audioContext.state !== 'running' || !audioResumed) {
+                return;
+            }
+
+            let selectedMelody;
+
+            if (isFirstAmbientSoundPlay) {
+                selectedMelody = AMBIENT_MELODIES[0]; 
+                isFirstAmbientSoundPlay = false; 
+            } else {
+                const chanceToPlay = Math.random();
+                if (chanceToPlay < 0.33) { 
+                    return; 
+                }
+                const melodyIndex = Math.floor(Math.random() * AMBIENT_MELODIES.length);
+                selectedMelody = AMBIENT_MELODIES[melodyIndex];
+            }
+
+            if (!selectedMelody) {
+                return; 
+            }
+
+            let melodyCurrentTime = audioContext.currentTime + 0.2; 
+
+            selectedMelody.forEach(frequency => {
+                if (frequency !== null) { 
+                    playPluckNoteRevised(frequency, melodyCurrentTime);
+                }
+                melodyCurrentTime += AMBIENT_NOTE_DURATION;
+            });
+        }
+        
+        // --- Smell Boost Functions ---
+        function activateSmellBoost() {
+            const boostDurationMs = 60000; 
+            if (isSmellBoostActive) { 
+                smellBoostEndTime = performance.now() + boostDurationMs;
+                return;
+            }
+            isSmellBoostActive = true;
+            smellDetectionRange = initialSmellDetectionRange * 1.5; 
+            smellBoostEndTime = performance.now() + boostDurationMs; 
+            if (smellBoostIconElement) {
+                smellBoostIconElement.style.display = 'inline-flex'; 
+            }
+        }
+
+        function deactivateSmellBoost() {
+            isSmellBoostActive = false;
+            smellDetectionRange = initialSmellDetectionRange; 
+            if (smellBoostIconElement) {
+                smellBoostIconElement.style.display = 'none'; 
+            }
+        }
+
+        function onKeyDown(event) { if (!isGameOver) keysPressed[event.key.toLowerCase()] = true; }
+        function onKeyUp(event) { if (!isGameOver) keysPressed[event.key.toLowerCase()] = false; }
+
+        function updatePlayerMovement() {
+            if (isGameOver || !pig) return;
+            const moveVector = new THREE.Vector3();
+            let isMoving = false; 
+
+            if (keysPressed['w']) { moveVector.z -= 1; isMoving = true; }
+            if (keysPressed['s']) { moveVector.z += 1; isMoving = true; }
+            if (keysPressed['a']) pigTargetRotation += pigTurnSpeed;
+            if (keysPressed['d']) pigTargetRotation -= pigTurnSpeed;
+
+            pig.rotation.y += (pigTargetRotation - pig.rotation.y) * 0.2; 
+
+            if (isMoving) { 
+                moveVector.normalize().multiplyScalar(pigSpeed);
+                moveVector.applyAxisAngle(new THREE.Vector3(0,1,0), pig.rotation.y); 
+                pig.position.add(moveVector);
+                playPigTrottingSound();
+
+                const bobTime = performance.now() * (Math.PI * 2 / (MIN_TROT_INTERVAL / PIG_BOB_SPEED_FACTOR));
+                pig.position.y = pigBaseY + Math.sin(bobTime) * PIG_BOB_AMOUNT;
+
+            } else {
+                if (pig.position.y !== pigBaseY) {
+                    pig.position.y += (pigBaseY - pig.position.y) * 0.1; 
+                }
+            }
+
+            pig.position.x = Math.max(-worldSize/2 + 1, Math.min(worldSize/2 - 1, pig.position.x));
+            pig.position.z = Math.max(-worldSize/2 + 1, Math.min(worldSize/2 - 1, pig.position.z));
+            updatePigShadowPosition();
+            const cameraOffset = new THREE.Vector3(0, 3.0, 3.3); 
+            const targetCameraPosition = pig.position.clone();
+            const offsetRotated = cameraOffset.clone().applyAxisAngle(new THREE.Vector3(0,1,0), pig.rotation.y);
+            targetCameraPosition.add(offsetRotated);
+            camera.position.lerp(targetCameraPosition, 0.15); 
+            camera.lookAt(pig.position.clone().add(new THREE.Vector3(0, 0.7, 0))); 
+        }
+
+        function onMouseDown(event) {
+            if (isGameOver) return;
+            if (!audioResumed && audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    audioResumed = true;
+                    truffles.forEach(truffle => {
+                        if (!truffle.collected && !truffle.soundDeactivated && !truffleAudioEmitters.has(truffle.id)) {
+                            createTruffleAudioEmitter(truffle);
+                        }
+                    });
+                }).catch(e => console.error("Error resuming AudioContext:", e));
+            }
+            if (event.button !== 0 || digCooldown ) return; 
+            if (!audioContext || audioContext.state !== "running") {
+                showMessage("Audio not ready, try clicking in the game world again.", 1500);
+                return;
+            }
+            let foundDiggable = false;
+            truffles.forEach(truffle => {
+                if (truffle.collected || truffle.soundDeactivated || !pig) return;
+                const emitter = truffleAudioEmitters.get(truffle.id);
+                const distance = pig.position.distanceTo(truffle.position);
+                if (emitter && emitter.isPulsing && distance < digRange) {
+                    foundDiggable = true;
+                    digAt(truffle);
+                }
+            });
+            if (!foundDiggable) showMessage("Nothing to dig here...", 1500);
+            digCooldown = true; setTimeout(() => { digCooldown = false; }, 1000); 
+        }
+
+        function digAt(truffle) {
+            if (isGameOver) return;
+            showMessage("Digging...", 1000);
+            const emitter = truffleAudioEmitters.get(truffle.id);
+            if (emitter && audioContext && audioContext.state === "running") {
+                emitter.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+                emitter.gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                try { emitter.oscillator.stop(audioContext.currentTime + 0.1); } catch(e) {/* already stopped */}
+                truffleAudioEmitters.delete(truffle.id);
+            }
+            
+            if (Math.random() < 0.20) { 
+                let badDigMessage;
+                if (Math.random() < 0.50) { 
+                    badDigMessage = "Aaargh! Just an old root!";
+                    setTimeout(() => showMessage(badDigMessage, 3000), 1000);
+                } else { 
+                    badDigMessage = "A carrot. Certainly a welcome treat, but it won't help pay my taxes.";
+                    setTimeout(() => showMessage(badDigMessage, 5000), 1000); 
+                    activateSmellBoost(); 
+                }
+                truffle.soundDeactivated = true; 
+                const index = truffles.indexOf(truffle);
+                if (index > -1) truffles.splice(index, 1);
+                spawnNewTruffle(); 
+                return; 
+            }
+
+            truffle.collected = true;
+            const truffleGeo = new THREE.SphereGeometry(0.3, 12, 12);
+            const truffleMat = new THREE.MeshPhongMaterial({ color: truffle.color });
+            truffle.visibleMesh = new THREE.Mesh(truffleGeo, truffleMat);
+            truffle.visibleMesh.position.copy(truffle.position);
+            truffle.visibleMesh.position.y = -0.2; 
+            truffle.visibleMesh.castShadow = true;
+            scene.add(truffle.visibleMesh);
+            let startY = truffle.visibleMesh.position.y;
+            let endY = (pig ? pig.position.y : 0) + 0.5; 
+            let duration = 1.5; let startTime = performance.now();
+            function animateRise() {
+                if (!truffle.visibleMesh) return;
+                let elapsedTime = (performance.now() - startTime) / 1000;
+                let progress = Math.min(elapsedTime / duration, 1);
+                truffle.visibleMesh.position.y = startY + (endY - startY) * progress;
+                if (progress < 1) {
+                    requestAnimationFrame(animateRise);
+                } else {
+                    scene.remove(truffle.visibleMesh); truffle.visibleMesh = null;
+                    playDingSound();
+                    const speciesData = truffleSpecies.find(s => s.id === truffle.speciesId);
+                    if (speciesData) {
+                        speciesData.count++;
+                        updateStatsUI();
+                    }
+                    showMessage(`Found a ${speciesData ? speciesData.name : 'truffle'}!`, 2000);
+                    const index = truffles.indexOf(truffle);
+                    if (index > -1) truffles.splice(index, 1);
+                    spawnNewTruffle();
+                }
+            }
+            animateRise();
+        }
+
+        function updateMoneyUI() { moneyCounterElement.textContent = `$${currentMoney.toFixed(2)}`; }
+        function updateTaxDueDisplay() { taxDueDisplayElement.textContent = `TAX DUE: $${(currentTaxAmount + debtOwed).toFixed(2)}`; }
+
+
+        function applyPriceChangesOnSell(soldSpeciesId, quantitySold) {
+            const BASE_PERCENT_DROP_SOLD_SPECIES = 0.04;
+            const BASE_PERCENT_INCREASE_OTHER_SPECIES_PER_UNIT = 0.01; // This is the "ordinary 0.01"
+
+            truffleSpecies.forEach(s => {
+                const oldPrice = s.currentPrice;
+
+                if (s.id === soldSpeciesId) {
+                    // For the species that was sold:
+                    // The base drop percentage (0.04) is scaled by ITS OWN marketCapMultiplier.
+                    const multiplier = s.marketCapMultiplier || 1; // Default to 1 if not defined
+                    let effectivePercentDrop = BASE_PERCENT_DROP_SOLD_SPECIES * multiplier;
+                    s.currentPrice *= Math.pow((1 - effectivePercentDrop), quantitySold);
+                    s.currentPrice = Math.max(1, s.currentPrice); // Ensure price doesn't go below 1
+                } else {
+                    // For other species:
+                    // Their price increase is the base (0.01) divided by THEIR marketCapDivider.
+                    let divider = s.marketCapDivider;
+                    // Ensure divider is a positive number, default to 1 if not or if zero.
+                    if (typeof divider !== 'number' || divider <= 0) {
+                        divider = 1; 
+                    }
+                    const effectivePercentIncreasePerUnit = BASE_PERCENT_INCREASE_OTHER_SPECIES_PER_UNIT / divider;
+                    const totalIncreaseFactor = 1 + (effectivePercentIncreasePerUnit * quantitySold);
+                    s.currentPrice *= totalIncreaseFactor;
+                }
+                updatePriceHistoryAndTrend(s, oldPrice);
+            });
+        }
+
+        function sellTruffles(speciesIdToSell = null) {
+            if (isGameOver) {
+                showMessage("Game is over. Cannot sell truffles.", 2000); return;
+            }
+            if (!audioResumed && audioContext && audioContext.state === 'suspended') {
+                showMessage("Please click in the game world once to enable audio before selling.", 2500); return;
+            }
+            let totalSoldValue = 0; let anyTrufflesSold = false;
+            if (speciesIdToSell) { 
+                const species = truffleSpecies.find(s => s.id === speciesIdToSell);
+                if (species && species.count > 0) {
+                    const quantity = species.count; const saleAmount = quantity * species.currentPrice;
+                    totalSoldValue += saleAmount; currentMoney += saleAmount;
+                    species.count = 0; anyTrufflesSold = true;
+                    applyPriceChangesOnSell(species.id, quantity);
+                    showMessage(`Sold ${quantity} ${species.name}(s) for $${saleAmount.toFixed(2)}!`, 2000);
+                } else {
+                    showMessage(`No ${species ? species.name : 'truffles'} of this type to sell!`, 2000);
+                }
+            } else { 
+                truffleSpecies.forEach(species => {
+                    if (species.count > 0) {
+                        const quantity = species.count; const saleAmount = quantity * species.currentPrice;
+                        totalSoldValue += saleAmount; currentMoney += saleAmount;
+                        species.count = 0; anyTrufflesSold = true;
+                        applyPriceChangesOnSell(species.id, quantity);
+                    }
+                });
+                if (anyTrufflesSold) showMessage(`Sold all truffles for $${totalSoldValue.toFixed(2)}!`, 2500);
+                else showMessage("No truffles to sell!", 2000);
+            }
+            if (anyTrufflesSold) {
+                updateMoneyUI(); updateStatsUI(); playDingSound();
+                if (marketModal.style.display === 'flex') updateMarketModal(); 
+            }
+        }
+
+        function updatePriceHistoryAndTrend(species, oldPrice) {
+            species.priceHistory.push(species.currentPrice);
+            if (species.priceHistory.length > PRICE_HISTORY_LENGTH) species.priceHistory.shift();
+            if (species.currentPrice > oldPrice) species.priceTrend = 'up';
+            else if (species.currentPrice < oldPrice) species.priceTrend = 'down';
+            else species.priceTrend = 'stable';
+        }
+
+        function triggerMarketFluctuation() {
+            if (isGameOver) return;
+            const randomIndex = Math.floor(Math.random() * truffleSpecies.length); 
+            truffleSpecies.forEach((s, index) => {
+                const oldPrice = s.currentPrice;
+                if (index === randomIndex) {
+                    s.currentPrice *= (Math.random() > 0.3 ? (0.75 + Math.random() * 0.2) : (1.05 + Math.random() * 0.25) ); 
+                } else {
+                    s.currentPrice *= (0.98 + Math.random() * 0.07); 
+                }
+                s.currentPrice = Math.max(1, s.currentPrice); 
+                updatePriceHistoryAndTrend(s, oldPrice);
+            });
+            showMessage("Market prices have fluctuated!", 2500);
+            if (marketModal.style.display === 'flex') updateMarketModal();
+        }
+
+        function collectTax() {
+            if (isGameOver) return;
+            const totalAmountToPay = currentTaxAmount + debtOwed;
+            showMessage(`Tax time! $${totalAmountToPay.toFixed(2)} is due.`, 3500);
+            playBellTollSound();
+            if (currentMoney >= totalAmountToPay) {
+                currentMoney -= totalAmountToPay;
+                showMessage(`$${totalAmountToPay.toFixed(2)} paid in taxes. The Man is pleased for now.`, 3000);
+                debtOwed = 0; consecutiveDebtRounds = 0;
+            } else {
+                showMessage(`You couldn't afford the $${totalAmountToPay.toFixed(2)} tax! Debt increased!`, 4000);
+                debtOwed = totalAmountToPay * 1.10; 
+                consecutiveDebtRounds++;
+                if (consecutiveDebtRounds >= 2) { 
+                    gameOver("You fell too deep into debt and were sent to the slaughterhouse."); 
+                    return;
+                }
+            }
+            currentTaxAmount += taxIncreaseAmount; 
+            updateMoneyUI(); updateTaxDueDisplay();
+        }
+
+        function gameOver(reason = "You were sent to the slaughterhouse.") {
+            if (isGameOver) return; 
+            isGameOver = true;
+
+            addScoreToScoreboard(currentMoney, gameDay); 
+
+            if (gameOverMessageElement) gameOverMessageElement.textContent = reason;
+            if (finalScoreDisplayElement) finalScoreDisplayElement.textContent = `Final Money: $${currentMoney.toFixed(2)}`;
+            if (finalDaysDisplayElement) finalDaysDisplayElement.textContent = `Survived: ${gameDay} Day(s)`; 
+            if (gameOverScreenElement) gameOverScreenElement.style.display = 'flex';
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            if (audioContext && audioContext.state === "running") {
+                truffleAudioEmitters.forEach(emitter => {
+                    if (emitter.oscillator) {
+                        emitter.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+                        emitter.gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                        try { emitter.oscillator.stop(audioContext.currentTime + 0.01); } catch(e) {/* already stopped */}
+                    }
+                });
+                truffleAudioEmitters.clear();
+            }
+            marketButton.disabled = true; 
+            settingsButton.disabled = true;
+            saveGameButton.disabled = true;
+            
+            if (statsDisplay) statsDisplay.style.pointerEvents = 'none'; 
+            keysPressed = {}; 
+        }
+
+
+        function updateStatsUI() {
+            statsDisplay.innerHTML = '';
+            truffleSpecies.forEach(s => {
+                const item = document.createElement('div');
+                item.classList.add('stat-item');
+                item.setAttribute('data-species-id', s.id);
+                const primaryBiomeInfo = getPrimaryBiomeForTruffle(s.id);
+                item.title = primaryBiomeInfo; 
+                item.innerHTML = `<span class="name">${s.name}:</span> <span class="count" id="${s.id}-count">${s.count}</span>`;
+                item.addEventListener('click', () => {
+                    if (isGameOver) { showMessage("Game is over. Cannot sell.", 1500); return; }
+                    sellTruffles(s.id);
+                });
+                statsDisplay.appendChild(item);
+            });
+        }
+
+        function toggleMarketModal() {
+            if (isGameOver && marketModal.style.display !== 'flex') return; 
+            if (marketModal.style.display === 'flex') marketModal.style.display = 'none';
+            else { updateMarketModal(); marketModal.style.display = 'flex'; }
+        }
+         function toggleSettingsModal() {
+            if (isGameOver && settingsModal.style.display !== 'flex') return;
+            if (settingsModal.style.display === 'flex') settingsModal.style.display = 'none';
+            else settingsModal.style.display = 'flex';
+        }
+
+        function initializeSettings() {
+            volumeSlider.value = masterGainNode ? masterGainNode.gain.value * 100 : 100;
+            volumeValueDisplay.textContent = `${volumeSlider.value}%`;
+            shadowToggle.checked = directionalLight ? directionalLight.castShadow : true;
+            if (pigShadowMesh) pigShadowMesh.visible = shadowToggle.checked;
+            cullDistanceSlider.value = (environmentElementCullingDistance / defaultCullDistance) * 100;
+            cullDistanceValueDisplay.textContent = `${cullDistanceSlider.value}%`;
+        }
+
+        function updateVolume() {
+            if (masterGainNode && audioContext) {
+                const volume = parseInt(volumeSlider.value) / 100;
+                masterGainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+                volumeValueDisplay.textContent = `${volumeSlider.value}%`;
+            }
+        }
+        function toggleAllShadows() {
+            const shadowsEnabled = shadowToggle.checked;
+            if (pigShadowMesh) pigShadowMesh.visible = shadowsEnabled;
+            if (directionalLight) directionalLight.castShadow = shadowsEnabled;
+            renderer.shadowMap.enabled = shadowsEnabled;
+            if (shadowsEnabled) {
+                updateEnvironmentVisibility(); 
+                renderer.shadowMap.needsUpdate = true;
+            } else {
+                allTrees.forEach(el => el.castShadow = false);
+                allShrubs.forEach(el => el.castShadow = false);
+                allAntNests.forEach(el => el.castShadow = false);
+                allFallenLogs.forEach(logGroup => logGroup.children.forEach(child => child.castShadow = false)); 
+                allWells.forEach(wellGroup => wellGroup.children.forEach(child => child.castShadow = false)); 
+                renderer.shadowMap.needsUpdate = true; 
+            }
+        }
+        function updateCullDistance() {
+            const percentage = parseInt(cullDistanceSlider.value);
+            environmentElementCullingDistance = defaultCullDistance * (percentage / 100);
+            cullDistanceValueDisplay.textContent = `${percentage}%`;
+            if (scene.fog) { 
+                scene.fog.near = environmentElementCullingDistance * 0.3; 
+                scene.fog.far = environmentElementCullingDistance * 0.9;
+            }
+            updateEnvironmentVisibility(); 
+            renderer.shadowMap.needsUpdate = true; 
+        }
+
+
+        function updateMarketModal() {
+            marketItemsContainer.innerHTML = '';
+            truffleSpecies.forEach(s => {
+                const itemDiv = document.createElement('div'); itemDiv.classList.add('market-item');
+                const nameSpan = document.createElement('span'); nameSpan.classList.add('market-item-name'); nameSpan.textContent = s.name;
+                const priceSpan = document.createElement('span'); priceSpan.classList.add('market-item-price'); priceSpan.textContent = `$${s.currentPrice.toFixed(2)}`;
+                const trendSpan = document.createElement('span');
+                if (s.priceTrend === 'up') { trendSpan.textContent = ' ▲'; trendSpan.classList.add('price-trend-up'); }
+                else if (s.priceTrend === 'down') { trendSpan.textContent = ' ▼'; trendSpan.classList.add('price-trend-down'); }
+                else { trendSpan.textContent = ' –'; } 
+                const graphCanvas = document.createElement('canvas'); graphCanvas.classList.add('price-history-graph');
+                graphCanvas.width = marketItemsContainer.clientWidth * 0.9 || 200; 
+                graphCanvas.height = 50; 
+                drawPriceGraph(graphCanvas, s.priceHistory);
+                itemDiv.appendChild(nameSpan);
+                const priceAndTrend = document.createElement('div');
+                priceAndTrend.appendChild(priceSpan); priceAndTrend.appendChild(trendSpan);
+                itemDiv.appendChild(priceAndTrend);
+                marketItemsContainer.appendChild(itemDiv);
+                marketItemsContainer.appendChild(graphCanvas);
+            });
+        }
+
+        function drawPriceGraph(canvas, history) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width; const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+            if (!history || history.length < 2) {
+                ctx.fillStyle = '#aaa'; ctx.textAlign = 'center'; ctx.font = '12px Nunito';
+                ctx.fillText('Not enough data', width / 2, height / 2); return;
+            }
+            const maxPrice = Math.max(...history, 1); 
+            const minPrice = Math.min(...history);
+            const priceRange = (maxPrice - minPrice === 0) ? 1 : (maxPrice - minPrice); 
+            
+            ctx.beginPath(); ctx.strokeStyle = '#007bff'; ctx.lineWidth = 1.5;
+            const padding = 5; 
+            const graphWidth = width - 2 * padding;
+            const graphHeight = height - 2 * padding;
+
+            history.forEach((price, index) => {
+                const x = (index / (history.length - 1)) * graphWidth + padding;
+                const y = graphHeight - (((price - minPrice) / priceRange) * graphHeight) + padding; 
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        let messageTimeout;
+        function showMessage(text, duration = 2000) {
+            if (isGameOver && text.toLowerCase().includes("game over")) { 
+                 if (gameOverMessageElement) gameOverMessageElement.textContent = text;
+                 if (gameOverScreenElement) gameOverScreenElement.style.display = 'flex';
+                 return;
+            }
+            if (isGameOver && duration > 0 && !text.toLowerCase().includes("saved") && !text.toLowerCase().includes("loaded") && !text.toLowerCase().includes("confirm")) return; 
+            
+            messageArea.textContent = text; messageArea.style.display = 'block';
+            clearTimeout(messageTimeout);
+            if (duration > 0) {
+                messageTimeout = setTimeout(() => { messageArea.style.display = 'none'; }, duration);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (marketModal.style.display === 'flex') updateMarketModal(); 
+        }
+
+        function updateGameClockAndTax(deltaTime) {
+            if (isGameOver) return;
+
+            gameTimeElapsedSeconds += deltaTime / 1000;
+
+            const totalGameTicksInMinutes = Math.floor(gameTimeElapsedSeconds / REAL_SECONDS_PER_GAME_HOUR * 60);
+            const effectiveTotalMinutesFromMidnight = (6 * 60) + totalGameTicksInMinutes;
+            const minutesIntoCurrentDayCycle = effectiveTotalMinutesFromMidnight % MINS_IN_LOGICAL_DAY;
+            const previousGameHour = gameHour; // Store previous hour
+            gameHour = Math.floor(minutesIntoCurrentDayCycle / 60);
+            gameMinute = minutesIntoCurrentDayCycle % 60;
+
+            const currentLogicalDay = 1 + Math.floor(totalGameTicksInMinutes / MINS_IN_LOGICAL_DAY);
+
+            if (currentLogicalDay > gameDay) { 
+                gameDay = currentLogicalDay;
+                taxCollectedForThisDay = false;
+            }
+
+            let displayDayForUI;
+            if (totalGameTicksInMinutes < UI_DAY_TICK_GAME_START_OFFSET_MINS) {
+                displayDayForUI = 1;
+            } else {
+                displayDayForUI = 2 + Math.floor((totalGameTicksInMinutes - UI_DAY_TICK_GAME_START_OFFSET_MINS) / MINS_IN_LOGICAL_DAY);
+            }
+
+            // --- NEW: Automatic Price Increase Logic ---
+            // Check roughly every 12 hours (e.g., when hour changes past a 12h mark like 6 or 18)
+            // A more precise way would track total elapsed game hours.
+            if (gameHour !== previousGameHour) { // Only check when the hour changes
+                // Calculate total hours passed since game start (approximate)
+                const totalGameHoursElapsed = Math.floor(totalGameTicksInMinutes / 60);
+                const hoursSinceLastIncrease = totalGameHoursElapsed - lastAutoPriceIncreaseHour;
+
+                if (lastAutoPriceIncreaseHour === -1 || hoursSinceLastIncrease >= 12) {
+                    console.log(`Applying auto price increase at Day ${gameDay}, Hour ${gameHour}`);
+                    truffleSpecies.forEach(s => {
+                        const oldPrice = s.currentPrice;
+                        s.currentPrice += 0.75; // Increase price by $1.00
+                        // Optional: Ensure price doesn't go below a minimum if needed
+                        // s.currentPrice = Math.max(1.00, s.currentPrice);
+                        updatePriceHistoryAndTrend(s, oldPrice);
+                    });
+                    lastAutoPriceIncreaseHour = totalGameHoursElapsed; // Update the hour of the last increase
+
+                    // Optional: Notify player or update market UI if open
+                    // showMessage("Truffle prices increased slightly.", 1500);
+                    if (marketModal.style.display === 'flex') {
+                        updateMarketModal();
+                    }
+                }
+            }
+
+            gameClockElement.textContent = `DAY ${displayDayForUI} - ${gameHour.toString().padStart(2, '0')}:00`;
+
+            if (gameHour === 5 && gameMinute === 0 && !taxCollectedForThisDay) {
+                collectTax();
+                taxCollectedForThisDay = true;
+            }
+        }
+
+        // --- Confirmation Modal Functions ---
+        function showConfirmationModal(title, message, onConfirm) {
+            confirmationTitleElement.textContent = title;
+            confirmationPromptMessageElement.textContent = message;
+            currentConfirmAction = onConfirm; 
+            confirmationModalElement.style.display = 'flex';
+        }
+
+        function hideConfirmationModal() {
+            confirmationModalElement.style.display = 'none';
+            currentConfirmAction = null;
+        }
+        
+        // --- Save/Load Game Functions ---
+        function promptSaveGame() {
+            if (isGameOver) {
+                showMessage("Cannot save: Game Over!", 2000);
+                return;
+            }
+            showConfirmationModal(
+                "Save Game", 
+                "Overwrite existing save data?", 
+                actuallySaveGame 
+            );
+        }
+
+        function actuallySaveGame() { 
+            const gameState = {
+                currentMoney,
+                currentTaxAmount,
+                debtOwed,
+                gameTimeElapsedSeconds,
+                gameHour,
+                gameMinute,
+                gameDay, 
+                taxCollectedForThisDay,
+                consecutiveDebtRounds,
+                truffleSpeciesData: truffleSpecies.map(s => ({ 
+                    id: s.id,
+                    count: s.count,
+                    currentPrice: s.currentPrice,
+                    priceHistory: s.priceHistory,
+                    priceTrend: s.priceTrend
+                })),
+                pigPosition: { x: pig.position.x, y: pig.position.y, z: pig.position.z },
+                pigRotationY: pig.rotation.y,
+                pigBaseY: pigBaseY, 
+                smellDetectionRange,
+                isSmellBoostActive,
+                smellBoostEndTime: isSmellBoostActive ? (smellBoostEndTime - performance.now()) : 0 
+            };
+            try {
+                localStorage.setItem(SAVE_GAME_KEY, JSON.stringify(gameState));
+                showMessage("Game Saved!", 2000);
+                checkLoadButtonState();
+            } catch (e) {
+                console.error("Error saving game:", e);
+                showMessage("Error saving game. Storage might be full.", 3000);
+            }
+        }
+
+        function promptLoadGame() {
+            if (!localStorage.getItem(SAVE_GAME_KEY)) {
+                showMessage("No saved game found to load.", 2000);
+                return;
+            }
+            showConfirmationModal(
+                "Load Game",
+                "Loading will overwrite current unsaved progress. Continue?",
+                actuallyLoadGame 
+            );
+        }
+
+        function actuallyLoadGame() { 
+            if (isGameOver && gameOverScreenElement.style.display === 'flex') {
+                 resetGameStateForLoad(); 
+            }
+
+            const savedDataString = localStorage.getItem(SAVE_GAME_KEY);
+            if (savedDataString) {
+                try {
+                    const savedState = JSON.parse(savedDataString);
+
+                    currentMoney = savedState.currentMoney;
+                    currentTaxAmount = savedState.currentTaxAmount;
+                    debtOwed = savedState.debtOwed;
+                    gameTimeElapsedSeconds = savedState.gameTimeElapsedSeconds;
+                    gameHour = savedState.gameHour;
+                    gameMinute = savedState.gameMinute;
+                    gameDay = savedState.gameDay; 
+                    taxCollectedForThisDay = savedState.taxCollectedForThisDay;
+                    consecutiveDebtRounds = savedState.consecutiveDebtRounds;
+                    
+                    savedState.truffleSpeciesData.forEach(savedSpecies => {
+                        const gameSpecies = truffleSpecies.find(s => s.id === savedSpecies.id);
+                        if (gameSpecies) {
+                            gameSpecies.count = savedSpecies.count;
+                            gameSpecies.currentPrice = savedSpecies.currentPrice;
+                            gameSpecies.priceHistory = savedSpecies.priceHistory || [gameSpecies.basePrice];
+                            gameSpecies.priceTrend = savedSpecies.priceTrend || 'stable';
+                        }
+                    });
+
+                    if (savedState.pigPosition && pig) {
+                        pig.position.set(savedState.pigPosition.x, savedState.pigPosition.y, savedState.pigPosition.z);
+                        pig.rotation.y = savedState.pigRotationY || 0;
+                        pigTargetRotation = pig.rotation.y; 
+                        pigBaseY = savedState.pigBaseY || 0.4; 
+                    }
+                    
+                    smellDetectionRange = savedState.smellDetectionRange || initialSmellDetectionRange;
+                    isSmellBoostActive = savedState.isSmellBoostActive || false;
+                    if (isSmellBoostActive && savedState.smellBoostEndTime > 0) {
+                        smellBoostEndTime = performance.now() + savedState.smellBoostEndTime;
+                        if(smellBoostIconElement) smellBoostIconElement.style.display = 'inline-flex';
+                    } else {
+                        if(smellBoostIconElement) smellBoostIconElement.style.display = 'none';
+                        isSmellBoostActive = false;
+                    }
+
+                    updateMoneyUI();
+                    updateTaxDueDisplay();
+                    updateStatsUI();
+                    
+                    createGroundAndEnvironment(); 
+                    spawnInitialTruffles(); 
+
+                    showMessage("Game Loaded!", 2000);
+                    isGameOver = false; 
+                    if (gameOverScreenElement) gameOverScreenElement.style.display = 'none';
+                    marketButton.disabled = false;
+                    settingsButton.disabled = false;
+                    saveGameButton.disabled = false;
+                    if (statsDisplay) statsDisplay.style.pointerEvents = 'auto';
+
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    lastFrameTime = performance.now(); 
+                    animate();
+
+                } catch (e) {
+                    console.error("Error loading game:", e);
+                    showMessage("Error loading saved data. It might be corrupted.", 3000);
+                    localStorage.removeItem(SAVE_GAME_KEY); 
+                    checkLoadButtonState();
+                }
+            } else {
+                showMessage("No saved game found.", 2000); 
+            }
+        }
+        
+        function resetGameStateForLoad() {
+            isGameOver = false;
+            currentMoney = 0;
+            currentTaxAmount = 411; 
+            debtOwed = 0;
+            gameTimeElapsedSeconds = 0;
+            gameHour = 6;
+            gameMinute = 0;
+            gameDay = 1;
+            taxCollectedForThisDay = false;
+            consecutiveDebtRounds = 0;
+
+            truffleSpecies.forEach(s => {
+                s.count = 0;
+                s.currentPrice = s.basePrice;
+                s.priceHistory = [s.basePrice];
+                s.priceTrend = 'stable';
+            });
+
+            if (pig) { 
+                pig.position.set(0, 0.4, 0);
+                pigBaseY = 0.4; 
+                pig.rotation.y = 0;
+                pigTargetRotation = 0;
+            }
+
+            smellDetectionRange = initialSmellDetectionRange;
+            isSmellBoostActive = false;
+            smellBoostEndTime = 0;
+            if(smellBoostIconElement) smellBoostIconElement.style.display = 'none';
+
+            if (audioContext && audioContext.state === "running") {
+                truffleAudioEmitters.forEach(emitter => {
+                    if (emitter.oscillator) {
+                        try { emitter.oscillator.stop(); } catch(e) {}
+                        emitter.gainNode.disconnect();
+                    }
+                });
+                truffleAudioEmitters.clear();
+            }
+            truffles.length = 0; 
+
+            marketButton.disabled = false;
+            settingsButton.disabled = false;
+            saveGameButton.disabled = false;
+            if (statsDisplay) statsDisplay.style.pointerEvents = 'auto';
+            if (gameOverScreenElement) gameOverScreenElement.style.display = 'none';
+            
+            updateMoneyUI();
+            updateTaxDueDisplay();
+            updateStatsUI();
+        }
+
+
+        function checkLoadButtonState() {
+            if (localStorage.getItem(SAVE_GAME_KEY)) {
+                loadGameButton.disabled = false;
+            } else {
+                loadGameButton.disabled = true;
+            }
+        }
+
+        // --- Scoreboard Functions ---
+        function toggleScoreboardModal() {
+            if (scoreboardModal.style.display === 'flex') {
+                scoreboardModal.style.display = 'none';
+            } else {
+                displayScoreboard();
+                scoreboardModal.style.display = 'flex';
+            }
+        }
+
+        function getScores() {
+            const scoresString = localStorage.getItem(SCOREBOARD_KEY);
+            if (scoresString) {
+                try {
+                    return JSON.parse(scoresString);
+                } catch (e) {
+                    console.error("Error parsing scores:", e);
+                    return []; 
+                }
+            }
+            return []; 
+        }
+
+        function addScoreToScoreboard(moneyEarned, daysSurvived) {
+            const scores = getScores();
+            const currentDate = new Date().toLocaleDateString(); 
+            const newScore = { score: moneyEarned, days: daysSurvived, date: currentDate }; 
+            
+            scores.push(newScore);
+            scores.sort((a, b) => {
+                if ((b.days || 0) === (a.days || 0)) { 
+                    return (b.score || 0) - (a.score || 0); 
+                }
+                return (b.days || 0) - (a.days || 0); 
+            });
+            
+            const topScores = scores.slice(0, MAX_SCOREBOARD_ENTRIES); 
+
+            try {
+                localStorage.setItem(SCOREBOARD_KEY, JSON.stringify(topScores));
+            } catch (e) {
+                console.error("Error saving scores:", e);
+            }
+        }
+
+        function displayScoreboard() {
+            const scores = getScores();
+            scoreboardListElement.innerHTML = ''; 
+
+            if (scores.length === 0) {
+                scoreboardListElement.innerHTML = '<li>No scores yet. Go find some truffles!</li>';
+                return;
+            }
+
+            scores.forEach((entry, index) => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `
+                    <div class="score-entry-main">
+                        <span class="score-rank">${index + 1}.</span>
+                        <span class="score-value">$${entry.score.toFixed(2)}</span>
+                    </div>
+                    <div>
+                        <span class="score-days">Days: ${entry.days || 'N/A'}</span>
+                        <span class="score-date">(${entry.date})</span>
+                    </div>
+                `;
+                scoreboardListElement.appendChild(listItem);
+            });
+        }
+
+
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+
+            if (isGameOver) { 
+                return;
+            }
+
+            const currentTime = performance.now();
+            const deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+
+            updateGameClockAndTax(deltaTime); 
+            updatePlayerMovement();
+            updateEnvironmentVisibility();
+
+            // Update Sky Color
+            const newSkyColor = calculateCurrentSkyColor(gameHour, gameMinute);
+            scene.background.copy(newSkyColor);
+            if (scene.fog) {
+                scene.fog.color.copy(newSkyColor);
+                 if (gameHour < 5 || gameHour > 20) { 
+                    scene.fog.near = environmentElementCullingDistance * 0.1;
+                    scene.fog.far = environmentElementCullingDistance * 0.6;
+                 } else if (gameHour > 7 && gameHour < 17) { 
+                    scene.fog.near = environmentElementCullingDistance * 0.3;
+                    scene.fog.far = environmentElementCullingDistance * 0.9;
+                 } else { 
+                    scene.fog.near = environmentElementCullingDistance * 0.2;
+                    scene.fog.far = environmentElementCullingDistance * 0.75;
+                 }
+            }
+
+            // Update Light Intensities (NEW)
+            if (ambientLight && directionalLight) {
+                const intensities = calculateCurrentLightIntensities(gameHour, gameMinute);
+                ambientLight.intensity = intensities.ambient;
+                directionalLight.intensity = intensities.directional;
+            }
+
+
+            if (audioContext && audioContext.state === "running") {
+                updateTruffleSounds();
+                if (currentTime >= nextAmbientSoundTriggerTime) {
+                    tryPlayAmbientMelody();
+                    nextAmbientSoundTriggerTime = currentTime + AMBIENT_SOUND_INTERVAL;
+                }
+                if (isSmellBoostActive && currentTime >= smellBoostEndTime) {
+                    deactivateSmellBoost();
+                }
+            }
+
+
+            if (renderer.shadowMap.needsUpdate && renderer.shadowMap.enabled) {
+                 renderer.render(scene, camera);
+                 renderer.shadowMap.needsUpdate = false; 
+            } else {
+                 renderer.render(scene, camera);
+            }
+        }
+        // --- Start the game ---
+        init();
+    </script>
+</body>
+</html>
